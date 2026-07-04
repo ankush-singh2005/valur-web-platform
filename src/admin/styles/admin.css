@@ -1,0 +1,128 @@
+/* =============================================================================
+   Valur Admin Console — theme extension
+   Builds on the neon dark theme in src/styles/theme.css
+   (canvas #050505, card #0e0f11, primary neon #c8f000, accent #d7ff00).
+
+   Adds the admin-specific layers the IA calls for:
+   - persona tags (coach amber · player royal blue · club burgundy)
+   - operational status colors + SLA escalation
+   - console chrome (sidebar, surfaces, rings, scrollbars)
+   Restrained-neon direction: near-black canvas, neon reserved for primary
+   actions / active nav / focus / key metrics. Personas + status carry the rest.
+============================================================================= */
+
+:root {
+  /* ---- console surfaces (slightly richer than the consumer app) ---- */
+  --adm-canvas: #050505;
+  --adm-surface: #0c0d0f;       /* page panels */
+  --adm-card: #111315;          /* cards / table containers */
+  --adm-card-2: #16181b;        /* nested / header rows */
+  --adm-elevated: #1a1d20;      /* popovers, menus */
+  --adm-sidebar: #0a0a0b;
+  --adm-hover: rgba(255, 255, 255, 0.04);
+  --adm-active: rgba(200, 240, 0, 0.10);
+
+  --adm-line: rgba(255, 255, 255, 0.08);
+  --adm-line-strong: rgba(255, 255, 255, 0.14);
+
+  --adm-text: #f4f5f3;
+  --adm-text-2: #a6a8a3;        /* secondary */
+  --adm-text-3: #6b6e69;        /* tertiary / disabled */
+
+  --adm-neon: #c8f000;
+  --adm-neon-2: #d7ff00;
+  --adm-neon-ink: #0d0d0d;      /* text on neon */
+  --adm-neon-soft: rgba(200, 240, 0, 0.12);
+  --adm-neon-line: rgba(200, 240, 0, 0.35);
+
+  /* ---- persona tags (from the IA) ---- */
+  --persona-coach: #f5a524;            /* amber */
+  --persona-coach-soft: rgba(245, 165, 36, 0.13);
+  --persona-coach-line: rgba(245, 165, 36, 0.32);
+
+  --persona-player: #5b9bff;           /* royal blue */
+  --persona-player-soft: rgba(91, 155, 255, 0.13);
+  --persona-player-line: rgba(91, 155, 255, 0.32);
+
+  --persona-club: #e0567a;             /* burgundy / rose */
+  --persona-club-soft: rgba(224, 86, 122, 0.13);
+  --persona-club-line: rgba(224, 86, 122, 0.32);
+
+  --persona-system: #9aa0a6;           /* platform / system */
+  --persona-system-soft: rgba(154, 160, 166, 0.12);
+  --persona-system-line: rgba(154, 160, 166, 0.28);
+
+  /* ---- operational status ---- */
+  --st-success: #2ed47a;               /* approved · active · released · paid */
+  --st-success-soft: rgba(46, 212, 122, 0.12);
+  --st-warning: #fbbf24;               /* awaiting · in review · holding */
+  --st-warning-soft: rgba(251, 191, 36, 0.12);
+  --st-danger: #ff5468;                /* rejected · blocked · disputed */
+  --st-danger-soft: rgba(255, 84, 104, 0.12);
+  --st-info: #5b9bff;                  /* informational */
+  --st-info-soft: rgba(91, 155, 255, 0.12);
+  --st-neutral: #8a8d88;               /* draft · closed · inactive */
+  --st-neutral-soft: rgba(138, 141, 136, 0.12);
+
+  /* SLA escalation (KAD: amber past 48h, red past 5 days) */
+  --sla-ok: #2ed47a;
+  --sla-warn: #fbbf24;
+  --sla-breach: #ff5468;
+
+  --adm-radius: 12px;
+  --adm-radius-sm: 8px;
+}
+
+/* ---- base console shell ---- */
+.adm-root {
+  background: var(--adm-canvas);
+  color: var(--adm-text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+}
+
+.adm-wordmark {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.04em;
+}
+
+/* tabular figures for all money / counts */
+.adm-num { font-variant-numeric: tabular-nums; }
+
+/* faint neon glow — used sparingly on the primary metric / active state */
+.adm-glow { box-shadow: 0 0 0 1px var(--adm-neon-line), 0 0 24px -6px rgba(200, 240, 0, 0.45); }
+.adm-glow-text { text-shadow: 0 0 18px rgba(200, 240, 0, 0.45); }
+
+/* dotted grid texture for empty/hero panels */
+.adm-grid-bg {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* custom scrollbars inside the console */
+.adm-root *::-webkit-scrollbar { width: 10px; height: 10px; }
+.adm-root *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.10);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 8px;
+}
+.adm-root *::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.18); background-clip: content-box; }
+.adm-root *::-webkit-scrollbar-track { background: transparent; }
+
+/* table row hover + sticky header helpers */
+.adm-table-row { transition: background-color 0.12s ease; }
+.adm-table-row:hover { background: var(--adm-hover); }
+
+/* focus ring (neon) */
+.adm-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--adm-canvas), 0 0 0 4px var(--adm-neon-line);
+}
+
+@keyframes adm-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.adm-live-dot { animation: adm-pulse 2s ease-in-out infinite; }
