@@ -36,12 +36,15 @@ function ChartTip({ active, payload, label, unit = "", money = false }: any) {
   return (
     <div className="rounded-lg border border-[var(--adm-line-strong)] bg-[var(--adm-elevated)] px-3 py-2 shadow-xl">
       {label && <p className="text-[11px] text-[var(--adm-text-3)] mb-1">{label}</p>}
-      {payload.map((p: any) => (
-        <p key={p.name} className="text-xs text-[var(--adm-text)] flex items-center gap-2 adm-num">
-          <span className="size-2 rounded-full" style={{ background: p.color || p.payload?.fill }} />
-          {p.name}: <span className="font-medium">{money ? iskCompact((p.value as number) * 1000) : `${p.value}${unit}`}</span>
-        </p>
-      ))}
+      {payload.map((p: any) => {
+        const asMoney = money && p.name !== "GMV (indexed)";
+        return (
+          <p key={p.name} className="text-xs text-[var(--adm-text)] flex items-center gap-2 adm-num">
+            <span className="size-2 rounded-full" style={{ background: p.color || p.payload?.fill }} />
+            {p.name}: <span className="font-medium">{asMoney ? iskCompact((p.value as number) * 1000) : `${p.value}${unit}`}</span>
+          </p>
+        );
+      })}
     </div>
   );
 }
@@ -106,7 +109,7 @@ export function FinanceOverview() {
 
       {/* Headline KPIs */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
-        <KpiCard label="Held balance · awaiting release" value={iskCompact(k.payoutsPending)} accent glow hint="Parked until an admin releases (KAD-05)" />
+        <KpiCard label="Held balance · awaiting release" value={iskCompact(k.payoutsPending)} accent glow hint="Parked until an admin releases" />
         <KpiCard label="Platform revenue · 20% take" value={iskCompact(k.revenue)} delta={k.deltas.revenue} hint="Net of payouts to coaches" />
         <KpiCard label="VAT (VSK) collected" value={iskCompact(k.vsk)} delta={k.deltas.vsk} hint="24% standard · owed to Skatturinn" />
         <KpiCard label="Net position" value={iskCompact(netPosition)} hint="Revenue + VSK held on platform" />
@@ -140,10 +143,11 @@ export function FinanceOverview() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                 <XAxis dataKey="d" tick={{ fill: "#6b6e69", fontSize: 11 }} axisLine={false} tickLine={false} interval={1} />
-                <YAxis tick={{ fill: "#6b6e69", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="left" tick={{ fill: "#6b6e69", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="right" orientation="right" hide domain={["dataMin - 1", "dataMax + 1"]} />
                 <Tooltip content={<ChartTip money />} cursor={{ stroke: "rgba(200,240,0,0.3)" }} />
-                <Area type="monotone" dataKey="revenue" name="Revenue" stroke={C.neon} strokeWidth={2} fill="url(#finRev)" />
-                <Area type="monotone" dataKey="bookings" name="GMV (indexed)" stroke={C.blue} strokeWidth={2} fill="url(#finGmv)" />
+                <Area yAxisId="left" type="monotone" dataKey="revenue" name="Revenue" stroke={C.neon} strokeWidth={2} fill="url(#finRev)" />
+                <Area yAxisId="right" type="monotone" dataKey="bookings" name="GMV (indexed)" stroke={C.blue} strokeWidth={2} fill="url(#finGmv)" />
                 <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: 12, color: "#a6a8a3" }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -162,7 +166,7 @@ export function FinanceOverview() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-[11px] text-[var(--adm-text-3)] text-center -mt-1">Player-paid vs club-paid · by 20% fee earned</p>
+          <p className="text-[11px] text-[var(--adm-text-3)] text-center mt-2">Player-paid vs club-paid · by 20% fee earned</p>
         </SectionCard>
       </div>
 
@@ -307,7 +311,7 @@ export function PayoutsQueue() {
       <PageHeader
         title="Payouts Queue"
         description="Every completed session that owes a coach money. Nothing leaves the platform until released here."
-        crumbs={[{ label: "Finance", to: "/admin/finance" }, { label: "Payouts" }]}
+        crumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Finance", to: "/admin/finance" }, { label: "Payouts" }]}
         actions={<span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--adm-text-3)] border border-[var(--adm-line)] rounded-full px-2.5 py-1"><Lock className="size-3" /> Finance / Super Admin</span>}
       />
 
@@ -411,7 +415,7 @@ export function PayoutDetail() {
 
             <div className="rounded-lg border border-[var(--adm-line)] overflow-hidden">
               <BreakdownRow label="Gross (this leg)" value={payout.gross} sub={payout.leg ? `${payout.leg} share of the booking charge` : "Full session charge"} />
-              <BreakdownRow label={`Platform fee · ${pct(PLATFORM_FEE * 100)}`} value={-fee} sub="Valur take rate (KAD-07)" muted />
+              <BreakdownRow label={`Platform fee · ${pct(PLATFORM_FEE * 100)}`} value={-fee} sub="Valur take rate" muted />
               <BreakdownRow label="Net payable to payee" value={net} emphasis />
             </div>
 
@@ -534,7 +538,7 @@ function PayoutDecision({ payout, net }: { payout: Payout; net: number }) {
   const linkedDispute = disputes.find((d) => d.bookingId === payout.bookingId);
 
   return (
-    <SectionCard title="Decision" subtitle="Release · Hold · Block (KAD-05)">
+    <SectionCard title="Decision" subtitle="Release · Hold · Block">
       {settled ? (
         <div className="flex items-center gap-2.5 rounded-lg border border-[var(--adm-line)] bg-[var(--adm-card-2)] px-3.5 py-3">
           <CircleDot className="size-4 text-[var(--adm-text-3)]" />
@@ -900,7 +904,7 @@ export function RefundsDisputes() {
       <PageHeader
         title="Refunds & Disputes"
         description="The safety valve. When a session goes wrong, this is where funds are held and the money is unwound."
-        crumbs={[{ label: "Finance", to: "/admin/finance" }, { label: "Disputes" }]}
+        crumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Finance", to: "/admin/finance" }, { label: "Disputes" }]}
       />
 
       <Toolbar

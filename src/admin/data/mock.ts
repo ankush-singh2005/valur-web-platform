@@ -396,9 +396,9 @@ export const platformSettings = {
 // ---- Dashboard aggregates -------------------------------------------------
 export const dashboard = {
   actionQueue: [
-    { key: "coaches", label: "Coaches awaiting approval", count: 3, to: "/admin/approvals", tone: "coach" as const },
-    { key: "clubs", label: "Clubs awaiting approval", count: 2, to: "/admin/approvals", tone: "club" as const },
-    { key: "tiers", label: "Tier-upgrade requests", count: 2, to: "/admin/approvals", tone: "system" as const },
+    { key: "coaches", label: "Coaches awaiting approval", count: 3, to: "/admin/approvals?tab=Coach+L1", tone: "coach" as const },
+    { key: "clubs", label: "Clubs awaiting approval", count: 2, to: "/admin/approvals?tab=Club+L1", tone: "club" as const },
+    { key: "tiers", label: "Tier-upgrade requests", count: 2, to: "/admin/approvals?tab=Tier+L2", tone: "system" as const },
     { key: "payouts", label: "Payouts awaiting release", count: 5, to: "/admin/finance/payouts", tone: "system" as const },
     { key: "held", label: "Held / disputed payments", count: 3, to: "/admin/finance/disputes", tone: "system" as const },
     { key: "tickets", label: "Open tickets", count: 3, to: "/admin/support", tone: "system" as const },

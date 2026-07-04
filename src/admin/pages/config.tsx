@@ -1,10 +1,11 @@
 import * as React from "react";
 import { toast } from "sonner";
 import {
-  Save, Pencil, Plus, X, ShieldCheck, GraduationCap,
-  Eye, Award, Users, Building2, Wallet, Sparkles, Trash2, Tag, MessageSquare,
+  Save, Pencil, Plus, X, Check, ShieldCheck, GraduationCap,
+  Award, Users, Wallet, Sparkles, Trash2, Tag, MessageSquare,
   Package, Layers, AlertTriangle, Coins, Globe, Languages, Clock, RotateCcw,
-  PlayCircle, EyeOff, MapPin, Video, Copy, ExternalLink,
+  PlayCircle, EyeOff, MapPin, Video, Copy, ExternalLink, CheckCircle2,
+  Unlock, Search, TrendingUp, Home, Calendar, Crown, Percent, UserCheck, Receipt, User,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { DataTable, type Column } from "../components/DataTable";
@@ -186,28 +187,66 @@ const TIER_CRITERIA: Record<string, { label: string; rule: string }[]> = {
   ],
 };
 
-const TIER_UNLOCKS: Record<Persona, Record<string, string>> = {
+const TIER_UNLOCKS: Record<Persona, Record<string, string[]>> = {
   coach: {
-    Grassroots: "Listed in search · standard placement · standard badge.",
-    Local: "Boosted local search visibility · “Local” badge on profile.",
-    Pro: "Featured placement in category results · “Pro” badge emphasis.",
-    Marquee: "Homepage & curated-lecture eligibility · prominent Marquee badge.",
+    Grassroots: ["Listed in search", "Standard placement", "Standard badge"],
+    Local: ["Boosted local search visibility", "“Local” badge on profile"],
+    Pro: ["Featured placement in category results", "“Pro” badge emphasis"],
+    Marquee: ["Homepage eligibility", "Curated-lecture eligibility", "Prominent Marquee badge"],
   },
   player: {
-    Beginner: "Can book any open session · basic profile.",
-    Intermediate: "Verified-clip badge · surfaced to coaches in discovery.",
-    Advanced: "Advanced badge · eligible for elite/invite-only programmes.",
+    Beginner: ["Can book any open session", "Basic profile"],
+    Intermediate: ["Verified-clip badge", "Surfaced to coaches in discovery"],
+    Advanced: ["Advanced badge", "Eligible for elite/invite-only programmes"],
   },
   club: {
-    Junior: "Squad booking · standard package catalogue.",
-    Senior: "Bulk-session discounts · priority scheduling.",
-    Academy: "Maximum bulk discounts · dedicated account manager · invoice terms.",
+    Junior: ["Squad booking", "Standard package catalogue"],
+    Senior: ["Bulk-session discounts", "Priority scheduling"],
+    Academy: ["Maximum bulk discounts", "Dedicated account manager", "Invoice terms"],
   },
 };
+
+/**
+ * One icon per underlying concept, not per persona - so "badge", "booking", "discount", etc.
+ * render identically everywhere they appear across Coach/Player/Club instead of drifting.
+ * Order matters: more specific concepts are checked before their looser overlaps (e.g.
+ * "badge" before "profile" so "“Local” badge on profile" reads as a badge, not a profile perk).
+ */
+const PERK_ICON_RULES: [RegExp, React.ComponentType<{ className?: string }>][] = [
+  [/badge/i, Award],
+  [/discount/i, Percent],
+  [/book|session|schedul/i, Calendar],
+  [/search|discover|surfaced|visibility/i, Search],
+  [/placement|featured/i, TrendingUp],
+  [/homepage/i, Home],
+  [/lecture/i, GraduationCap],
+  [/elite|invite-only/i, Crown],
+  [/account manager/i, UserCheck],
+  [/invoice/i, Receipt],
+  [/catalogue|package/i, Package],
+  [/profile/i, User],
+];
+function perkIcon(label: string) {
+  return PERK_ICON_RULES.find(([re]) => re.test(label))?.[1] ?? CheckCircle2;
+}
 
 export function TierCriteria() {
   const [persona, setPersona] = React.useState<Persona>("coach");
   const ladder = TIERS[persona === "system" ? "coach" : persona] as readonly string[];
+  const [criteria, setCriteria] = React.useState(TIER_CRITERIA);
+  const [editingKey, setEditingKey] = React.useState<string | null>(null);
+  const [draft, setDraft] = React.useState({ label: "", rule: "" });
+
+  function startEdit(tier: string, ci: number, c: { label: string; rule: string }) {
+    setEditingKey(`${tier}-${ci}`);
+    setDraft({ label: c.label, rule: c.rule });
+  }
+
+  function saveEdit(tier: string, ci: number) {
+    setCriteria((prev) => ({ ...prev, [tier]: prev[tier].map((c, i) => (i === ci ? { ...draft } : c)) }));
+    setEditingKey(null);
+    toast.success("Criteria updated", { description: "Versioned and effective-dated · written to the Audit Log." });
+  }
 
   return (
     <div>
@@ -248,29 +287,80 @@ export function TierCriteria() {
             <div>
               <p className="text-[11px] uppercase tracking-wide text-[var(--adm-text-3)] font-medium mb-2.5">Criteria to qualify</p>
               <ul className="space-y-2">
-                {TIER_CRITERIA[tier]?.map((c, ci) => (
-                  <li
-                    key={ci}
-                    onClick={() => toast(`Editing "${c.label}" for ${tier}`, { description: "Changes are versioned and effective-dated." })}
-                    className="group flex items-start gap-2.5 rounded-lg border border-[var(--adm-line)] bg-[var(--adm-card-2)] px-3 py-2 hover:border-[var(--adm-line-strong)] transition-colors cursor-pointer"
-                  >
-                    <span className="size-1.5 rounded-full bg-[var(--adm-neon)] mt-1.5 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[11px] uppercase tracking-wide text-[var(--adm-text-3)] font-medium">{c.label}</span>
-                      <p className="text-sm text-[var(--adm-text)] leading-snug">{c.rule}</p>
-                    </div>
-                    <Pencil className="size-3 text-[var(--adm-text-3)] opacity-0 group-hover:opacity-100 transition-opacity mt-1 shrink-0" />
-                  </li>
-                ))}
+                {criteria[tier]?.map((c, ci) => {
+                  const key = `${tier}-${ci}`;
+                  if (editingKey === key) {
+                    return (
+                      <li key={ci} className="rounded-lg border border-[var(--adm-neon-line)] bg-[var(--adm-card-2)] px-3 py-2.5 space-y-2">
+                        <input
+                          value={draft.label}
+                          onChange={(e) => setDraft((d) => ({ ...d, label: e.target.value }))}
+                          className="w-full bg-transparent text-[11px] uppercase tracking-wide text-[var(--adm-text-3)] font-medium outline-none border-b border-[var(--adm-line)] pb-1.5"
+                        />
+                        <input
+                          value={draft.rule}
+                          onChange={(e) => setDraft((d) => ({ ...d, rule: e.target.value }))}
+                          autoFocus
+                          className="w-full bg-transparent text-sm text-[var(--adm-text)] outline-none"
+                        />
+                        <div className="flex items-center justify-end gap-1.5 pt-1">
+                          <button
+                            onClick={() => setEditingKey(null)}
+                            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-xs text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors"
+                          >
+                            <X className="size-3" /> Cancel
+                          </button>
+                          <button
+                            onClick={() => saveEdit(tier, ci)}
+                            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-xs bg-[var(--adm-neon)] text-[var(--adm-neon-ink)] font-semibold hover:brightness-110 transition"
+                          >
+                            <Check className="size-3" /> Save
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  }
+                  return (
+                    <li
+                      key={ci}
+                      className="flex items-start gap-2.5 rounded-lg border border-[var(--adm-line)] bg-[var(--adm-card-2)] px-3 py-2 hover:border-[var(--adm-line-strong)] transition-colors"
+                    >
+                      <span className="size-1.5 rounded-full bg-[var(--adm-neon)] mt-1.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[11px] uppercase tracking-wide text-[var(--adm-text-3)] font-medium">{c.label}</span>
+                        <p className="text-sm text-[var(--adm-text)] leading-snug">{c.rule}</p>
+                      </div>
+                      <button
+                        onClick={() => startEdit(tier, ci, c)}
+                        aria-label={`Edit ${c.label}`}
+                        className="shrink-0 grid place-items-center size-6 rounded-md text-[var(--adm-text-3)] hover:text-[var(--adm-neon)] hover:bg-[var(--adm-hover)] transition-colors mt-0.5"
+                      >
+                        <Pencil className="size-3.5" />
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
 
             <div className="rounded-lg border border-[var(--adm-neon-line)] bg-[var(--adm-neon-soft)] p-4">
-              <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-[var(--adm-neon)] font-medium mb-2">
-                {persona === "coach" ? <Eye className="size-3.5" /> : persona === "club" ? <Building2 className="size-3.5" /> : <Award className="size-3.5" />}
+              <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-[var(--adm-neon)] font-medium mb-3">
+                <Unlock className="size-3.5" />
                 What this tier unlocks
               </p>
-              <p className="text-sm text-[var(--adm-text-2)] leading-relaxed">{TIER_UNLOCKS[persona]?.[tier]}</p>
+              <ul className="space-y-2.5">
+                {TIER_UNLOCKS[persona]?.[tier]?.map((perk, pi) => {
+                  const Icon = perkIcon(perk);
+                  return (
+                    <li key={pi} className="flex items-center gap-2.5 text-sm text-[var(--adm-text-2)] leading-snug">
+                      <span className="grid place-items-center size-6 rounded-full bg-[var(--adm-neon)]/15 text-[var(--adm-neon)] shrink-0">
+                        <Icon className="size-3.5" />
+                      </span>
+                      {perk}
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           </SectionCard>
         ))}
@@ -339,11 +429,6 @@ export function Taxonomy() {
           </SectionCard>
         ))}
       </div>
-
-      <ControlNote>
-        Role-gated to <span className="text-[var(--adm-text-2)]">Super Admin · Content Moderator</span>. All edits are logged. A safe rename re-points every
-        tagged record to the new label rather than orphaning it - nothing tagged is ever lost.
-      </ControlNote>
     </div>
   );
 }
@@ -487,11 +572,6 @@ export function PackageTemplates() {
           </ul>
         </SectionCard>
       </div>
-
-      <ControlNote>
-        Role-gated to <span className="text-[var(--adm-text-2)]">Super Admin · Operations</span>. Price changes are versioned - existing purchases always keep
-        the price agreed at checkout. Retiring a template removes it from new purchases only.
-      </ControlNote>
     </div>
   );
 }
@@ -711,10 +791,6 @@ export function PlatformSettings() {
             <Stat label="On a 100.000 kr. booking" value={isk(20_000)} tone="var(--adm-neon)" />
             <span className="text-[11px] text-[var(--adm-text-3)] leading-snug">platform fee at the current 20% take · the coach nets {isk(80_000)} before VSK.</span>
           </div>
-
-          <ControlNote>
-            <span className="text-[var(--adm-text-2)]">Super-Admin only.</span> Versioned and effective-dated. Saving triggers the impact preview before anything changes.
-          </ControlNote>
         </SectionCard>
 
         {/* PLATFORM */}
@@ -773,11 +849,6 @@ export function PlatformSettings() {
               ))}
             </div>
           </div>
-
-          <ControlNote>
-            <span className="text-[var(--adm-text-2)]">Super-Admin only.</span> Every flag flip is versioned, effective-dated, and logged. P2 flags stay off
-            until their preconditions are proven in production.
-          </ControlNote>
         </SectionCard>
       </div>
     </div>

@@ -316,7 +316,7 @@ export function CoachDetail() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Credentials" subtitle="Verification carried over from onboarding (KAD-04)" bodyClassName="p-0">
+            <SectionCard title="Credentials" subtitle="Verification carried over from onboarding" bodyClassName="p-0">
               <ul>
                 {c.credentials.map((cr, i) => (
                   <li key={i} className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)] last:border-0">
@@ -355,7 +355,7 @@ export function CoachDetail() {
               )}
             </SectionCard>
 
-            <SectionCard title="Money" subtitle="Earnings net of the 20% platform fee (KAD-05)">
+            <SectionCard title="Money" subtitle="Earnings net of the 20% platform fee">
               <StatGrid>
                 <Stat label="Lifetime earned · net" value={<Money amount={netPayout(c.totalEarned)} />} tone="var(--adm-neon)" />
                 <Stat label="Pending payouts" value={<Money amount={pendingTotal} />} tone={pendingTotal > 0 ? "var(--st-warning)" : undefined} />
@@ -555,7 +555,7 @@ export function PlayerDetail() {
               )}
             </SectionCard>
 
-            <SectionCard title="Video verification" subtitle="Non-blocking - players book with or without it (KAD-03)">
+            <SectionCard title="Video verification" subtitle="Non-blocking - players book with or without it">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="grid place-items-center size-10 rounded-lg bg-[var(--persona-player-soft)]" style={{ boxShadow: "inset 0 0 0 1px var(--persona-player-line)" }}>

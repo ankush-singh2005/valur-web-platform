@@ -96,6 +96,7 @@ export function TicketsList() {
       <PageHeader
         title="Tickets"
         description="The native support queue - every customer message in one lightweight, triageable list."
+        crumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Tickets" }]}
       />
 
 

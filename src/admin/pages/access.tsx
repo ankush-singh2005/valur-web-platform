@@ -11,6 +11,7 @@ import {
 } from "../components/primitives";
 import { Toolbar, SearchInput, MiniSelect } from "../components/controls";
 import { SideTray } from "../components/SideTray";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/app/components/ui/dialog";
 import { adminUsers, auditLog, type AdminUser, type AuditEntry } from "../data/mock";
 import { ROLES, CURRENT_ADMIN } from "../lib/constants";
 import { dateTime } from "../lib/format";
@@ -34,7 +35,7 @@ export function AdminUsersRoles() {
   const [inviteEmail, setInviteEmail] = React.useState("");
   const [inviteRole, setInviteRole] = React.useState(ROLES[1].label);
   const [rolesOpen, setRolesOpen] = React.useState(false);
-  // null = the six-roles list; a role key = drilled into that role's permission detail
+  // set when a role is picked from the six-roles list - opens the comparison modal with that role's column highlighted
   const [roleDetail, setRoleDetail] = React.useState<string | null>(null);
 
   const isSuper = CURRENT_ADMIN.role === "super";
@@ -205,56 +206,54 @@ export function AdminUsersRoles() {
       </p>
 
       {/* Roles reference - on-demand tray, not permanent real estate.
-          List view = the six roles; clicking one drills into its full
-          permission breakdown in place (the old standalone Permissions
-          Matrix page, AD·33, now lives here instead of its own screen). */}
+          Clicking a role closes the tray and opens the full comparison
+          matrix (the old standalone Permissions Matrix page, AD·33, now
+          lives here instead of its own screen) with that role's column
+          highlighted. */}
       <SideTray
         open={rolesOpen}
         onClose={() => setRolesOpen(false)}
-        onBack={roleDetail ? () => setRoleDetail(null) : undefined}
-        title={roleDetail ? ROLES.find((r) => r.key === roleDetail)?.label : "The six roles"}
-        subtitle={roleDetail ? "What this role can see and do (KAD-09)" : "Least-privilege reference (KAD-09)"}
-        width={roleDetail ? 440 : 420}
+        title="The six roles"
+        subtitle="Least-privilege reference"
+        width={420}
       >
-        {roleDetail ? (
-          <RolePermissionDetail roleKey={roleDetail} />
-        ) : (
-          <ul>
-            {ROLES.map((r) => {
-              const privileged = r.key === "super";
-              return (
-                <li key={r.key} className="border-b border-[var(--adm-line)] last:border-0">
-                  <button
-                    onClick={() => setRoleDetail(r.key)}
-                    className="w-full flex items-start gap-3 py-3.5 text-left hover:bg-[var(--adm-hover)] transition-colors -mx-1 px-1 rounded-lg"
+        <ul>
+          {ROLES.map((r) => {
+            const privileged = r.key === "super";
+            return (
+              <li key={r.key} className="border-b border-[var(--adm-line)] last:border-0">
+                <button
+                  onClick={() => { setRoleDetail(r.key); setRolesOpen(false); }}
+                  className="w-full flex items-start gap-3 py-3.5 text-left hover:bg-[var(--adm-hover)] transition-colors -mx-1 px-1 rounded-lg"
+                >
+                  <span
+                    className="grid place-items-center size-7 rounded-lg shrink-0 mt-0.5"
+                    style={{
+                      background: privileged ? "var(--st-danger-soft)" : "var(--adm-card-2)",
+                      color: privileged ? "var(--st-danger)" : "var(--adm-text-3)",
+                    }}
                   >
-                    <span
-                      className="grid place-items-center size-7 rounded-lg shrink-0 mt-0.5"
-                      style={{
-                        background: privileged ? "var(--st-danger-soft)" : "var(--adm-card-2)",
-                        color: privileged ? "var(--st-danger)" : "var(--adm-text-3)",
-                      }}
-                    >
-                      {privileged ? <ShieldAlert className="size-4" /> : <ShieldCheck className="size-4" />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-[var(--adm-text)]">{r.label}</p>
-                      <p className="text-xs text-[var(--adm-text-3)] mt-0.5 leading-relaxed">{r.desc}</p>
-                    </div>
-                    <ChevronRight className="size-4 text-[var(--adm-text-3)] mt-1 shrink-0" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    {privileged ? <ShieldAlert className="size-4" /> : <ShieldCheck className="size-4" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-[var(--adm-text)]">{r.label}</p>
+                    <p className="text-xs text-[var(--adm-text-3)] mt-0.5 leading-relaxed">{r.desc}</p>
+                  </div>
+                  <ChevronRight className="size-4 text-[var(--adm-text-3)] mt-1 shrink-0" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </SideTray>
+
+      <RoleComparisonModal roleKey={roleDetail} onClose={() => setRoleDetail(null)} />
     </div>
   );
 }
 
-/** Per-role capability breakdown - the drill-down shown inside the six-roles tray. */
-function RolePermissionDetail({ roleKey }: { roleKey: string }) {
+/** Full six-role capability comparison - opened from the roles tray, with the picked role's column highlighted. */
+function RoleComparisonModal({ roleKey, onClose }: { roleKey: string | null; onClose: () => void }) {
   const groups = React.useMemo(() => {
     const order: string[] = [];
     const byMod: Record<string, Cap[]> = {};
@@ -266,49 +265,95 @@ function RolePermissionDetail({ roleKey }: { roleKey: string }) {
   }, []);
 
   return (
-    <div>
-      <div className="space-y-5">
-        {groups.map((g) => (
-          <div key={g.module}>
-            <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[var(--adm-text-3)] mb-2">{g.module}</p>
-            <ul className="space-y-1.5">
-              {g.caps.map((c, i) => {
-                const on = c.allow[roleKey];
-                return (
-                  <li
-                    key={i}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-[var(--adm-line)] px-3 py-2"
-                    style={c.sensitive ? { background: "color-mix(in srgb, var(--st-danger) 5%, transparent)" } : undefined}
-                  >
-                    <span className="flex items-center gap-2 text-sm text-[var(--adm-text)] min-w-0">
-                      {c.sensitive && <Lock className="size-3 text-[var(--st-danger)] shrink-0" />}
-                      <span className="truncate">{c.label}</span>
-                    </span>
-                    <span className="flex items-center gap-2 shrink-0">
-                      {c.sensitive && <Pill tone="danger">Sensitive</Pill>}
-                      {on ? (
-                        <Check
-                          className="size-4 shrink-0"
-                          style={{ color: c.sensitive ? "var(--st-danger)" : "var(--adm-neon)" } as React.CSSProperties}
-                        />
-                      ) : (
-                        <Minus className="size-3.5 text-[var(--adm-text-3)] opacity-40 shrink-0" />
-                      )}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </div>
+    <Dialog open={!!roleKey} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-[var(--adm-elevated)] border-[var(--adm-line-strong)] text-[var(--adm-text)] sm:max-w-[1100px] w-[calc(100%-2rem)] max-h-[85vh] p-0 gap-0 flex flex-col [&>button]:text-[var(--adm-text-3)] [&>button:hover]:text-[var(--adm-text)]">
+        <div className="px-6 pt-6 pb-4 border-b border-[var(--adm-line)] shrink-0">
+          <DialogTitle className="text-lg font-semibold text-[var(--adm-text)]">Role comparison</DialogTitle>
+          <DialogDescription className="text-sm text-[var(--adm-text-3)] mt-1">
+            Full capability matrix across all six roles (KAD-09) - the same rubric admin invitations and role changes are checked against.
+          </DialogDescription>
+        </div>
 
-      <div className="mt-5 pt-4 border-t border-[var(--adm-line)] flex flex-col gap-1.5 text-[11px] text-[var(--adm-text-3)]">
-        <span className="inline-flex items-center gap-1.5"><Check className="size-3.5 text-[var(--adm-neon)]" /> Allowed</span>
-        <span className="inline-flex items-center gap-1.5"><Check className="size-3.5 text-[var(--st-danger)]" /> Allowed · sensitive</span>
-        <span className="inline-flex items-center gap-1.5"><Minus className="size-3 opacity-40" /> Not permitted</span>
-      </div>
-    </div>
+        <div className="overflow-auto px-6 py-4">
+          <table className="w-full min-w-[880px] border-separate border-spacing-0">
+            <thead>
+              <tr>
+                <th className="sticky left-0 bg-[var(--adm-elevated)] text-left text-[11px] uppercase tracking-wide text-[var(--adm-text-3)] font-medium pb-3 pr-3 align-bottom">
+                  Capability
+                </th>
+                {ROLES.map((r) => {
+                  const active = r.key === roleKey;
+                  return (
+                    <th
+                      key={r.key}
+                      className="text-center pb-3 px-2 align-bottom rounded-t-lg"
+                      style={active ? { background: "var(--adm-neon-soft)" } : undefined}
+                    >
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-semibold"
+                        style={{ color: r.key === "super" ? "var(--st-danger)" : active ? "var(--adm-neon)" : "var(--adm-text)" }}
+                      >
+                        {r.key === "super" && <ShieldAlert className="size-3" />}
+                        {r.label}
+                      </span>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {groups.map((g) => (
+                <React.Fragment key={g.module}>
+                  <tr>
+                    <td colSpan={ROLES.length + 1} className="pt-4 pb-1.5">
+                      <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[var(--adm-text-3)] bg-[var(--adm-card-2)] rounded-md px-3 py-1.5">
+                        {g.module}
+                      </p>
+                    </td>
+                  </tr>
+                  {g.caps.map((c, i) => (
+                    <tr key={i} className="border-b border-[var(--adm-line)] last:border-0">
+                      <td className="sticky left-0 bg-[var(--adm-elevated)] py-2 pr-3 text-sm text-[var(--adm-text)] whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          {c.sensitive && <Lock className="size-3 text-[var(--st-danger)] shrink-0" />}
+                          {c.label}
+                        </span>
+                      </td>
+                      {ROLES.map((r) => {
+                        const on = c.allow[r.key];
+                        const active = r.key === roleKey;
+                        return (
+                          <td
+                            key={r.key}
+                            className="text-center py-2 px-2"
+                            style={active ? { background: "color-mix(in srgb, var(--adm-neon-soft) 60%, transparent)" } : undefined}
+                          >
+                            {on ? (
+                              <Check
+                                className="size-4 inline-block"
+                                style={{ color: c.sensitive ? "var(--st-danger)" : "var(--adm-neon)" } as React.CSSProperties}
+                              />
+                            ) : (
+                              <Minus className="size-3.5 inline-block text-[var(--adm-text-3)] opacity-40" />
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="px-6 py-3.5 border-t border-[var(--adm-line)] shrink-0 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-[var(--adm-text-3)]">
+          <span className="inline-flex items-center gap-1.5"><Check className="size-3.5 text-[var(--adm-neon)]" /> Allowed</span>
+          <span className="inline-flex items-center gap-1.5"><Check className="size-3.5 text-[var(--st-danger)]" /> Allowed · sensitive</span>
+          <span className="inline-flex items-center gap-1.5"><Minus className="size-3 opacity-40" /> Not permitted</span>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

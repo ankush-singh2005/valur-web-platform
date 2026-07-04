@@ -335,7 +335,7 @@ export function TwoFactor() {
         </div>
 
         <p className="text-[11px] text-[var(--adm-text-3)] mt-7 text-center leading-relaxed">
-          Two-factor is mandatory for all roles (KAD-09).
+          Two-factor is mandatory for all roles.
         </p>
       </form>
     </AuthShell>

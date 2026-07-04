@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useNavigate, useParams, Link } from "react-router";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router";
 import {
   Inbox, Search as SearchIcon, FileCheck2, CheckCircle2, Flag, PlayCircle,
   Download, History, ShieldCheck, FileText, Star, Clock, TrendingUp,
@@ -26,9 +26,29 @@ const KINDS = [
 
 export function ApprovalsHub() {
   const nav = useNavigate();
-  const [tab, setTab] = React.useState("Coach L1");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const initialTab = KINDS.some((k) => k.key === requestedTab) ? requestedTab! : "Coach L1";
+  const [tab, setTab] = React.useState(initialTab);
   const [q, setQ] = React.useState("");
   const [scope, setScope] = React.useState<"all" | "mine" | "unassigned">("all");
+
+  // keep the tab in sync if the dashboard links here again with a different queue
+  React.useEffect(() => {
+    if (requestedTab && KINDS.some((k) => k.key === requestedTab) && requestedTab !== tab) {
+      setTab(requestedTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedTab]);
+
+  function selectTab(key: string) {
+    setTab(key);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    }, { replace: true });
+  }
 
   const counts = React.useMemo(() => {
     const c: Record<string, number> = {};
@@ -79,6 +99,7 @@ export function ApprovalsHub() {
       <PageHeader
         title="Approvals Hub"
         description="The gate. Every coach and club is human-reviewed before they can act. Two levels, one hub, separate queues."
+        crumbs={[{ label: "Dashboard", to: "/admin" }, { label: "Approvals Hub" }]}
         actions={<Link to="/admin/approvals/decisions" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm text-[var(--adm-text-2)] border border-[var(--adm-line)] hover:text-[var(--adm-text)] hover:border-[var(--adm-line-strong)] transition-colors"><History className="size-4" /> Decision Log</Link>}
       />
 
@@ -90,7 +111,7 @@ export function ApprovalsHub() {
           return (
             <button
               key={kdef.key}
-              onClick={() => setTab(kdef.key)}
+              onClick={() => selectTab(kdef.key)}
               className={`relative flex items-center gap-2 px-4 h-10 text-sm font-medium transition-colors ${active ? "text-[var(--adm-neon)]" : "text-[var(--adm-text-2)] hover:text-[var(--adm-text)]"}`}
             >
               {kdef.label}
@@ -358,7 +379,7 @@ export function PlayerVideo() {
           </>
         }
         right={
-          <SectionCard title="Review actions" subtitle="Non-blocking - players book with or without it (KAD-03)">
+          <SectionCard title="Review actions" subtitle="Non-blocking - players book with or without it">
             <div className="space-y-2">
               <button className="w-full h-10 rounded-lg bg-[var(--adm-neon)] text-[var(--adm-neon-ink)] text-sm font-semibold hover:brightness-110 transition">Verify · set badge</button>
               <button className="w-full h-10 rounded-lg border border-[var(--adm-line-strong)] text-[var(--adm-text)] text-sm font-medium hover:bg-[var(--adm-hover)] transition">Request re-submission</button>

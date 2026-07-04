@@ -376,7 +376,7 @@ export function BookingDetail() {
 
             {isHybrid && b.hybrid ? (
               <>
-                <p className="text-[11px] uppercase tracking-wide text-[var(--adm-text-3)] font-medium mb-2">Two settlement legs (KAD-06)</p>
+                <p className="text-[11px] uppercase tracking-wide text-[var(--adm-text-3)] font-medium mb-2">Two settlement legs</p>
                 <div className="rounded-lg border border-[var(--adm-line)] overflow-hidden">
                   <SettleRow
                     label={`Remote payout · ${b.hybrid.remote}`}

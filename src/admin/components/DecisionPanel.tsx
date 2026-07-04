@@ -43,7 +43,7 @@ export function DecisionPanel({
   }
 
   return (
-    <SectionCard title="Decision" subtitle="One decision set · Approve · Reject · Request info (KAD-03)">
+    <SectionCard title="Decision" subtitle="One decision set · Approve · Reject · Request info">
       <div className="grid grid-cols-3 gap-2">
         <DecisionButton tone="approve" active={mode === "approve"} onClick={() => setMode("approve")} icon={Check} label={approveLabel} />
         <DecisionButton tone="info" active={mode === "info"} onClick={() => setMode("info")} icon={MessageSquare} label="Request info" />
